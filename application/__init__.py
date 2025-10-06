@@ -7,7 +7,6 @@ from fastapi import FastAPI,Request,Depends,status
 from fastapi_amis_admin.admin.settings import Settings
 from fastapi_amis_admin.admin.site import AdminSite
 from fastapi_scheduler import SchedulerAdmin
-from fastapi_mail import ConnectionConfig, FastMail
 from fastapi.templating import Jinja2Templates
 from application.utilities.res import APIError
 
@@ -15,7 +14,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import sentry_sdk
 
 from application.configuration.db import ASYNC_DB_URI, DB_URI,activeSession,Base
 site = AdminSite(settings=Settings(database_url_async=ASYNC_DB_URI))
@@ -24,21 +22,6 @@ templates = Jinja2Templates(directory="application/templates")
 
 
 def create_app():
-    
-    if AppConfig.ENVIRONMENT is not None and AppConfig.ENVIRONMENT in ['production','staging'] and AppConfig.SENTRY_DSN is not None and AppConfig.SENTRY_DSN != "":
-        print("Initializinng sentry for "+AppConfig.ENVIRONMENT)
-        sentry_sdk.init(
-            dsn=AppConfig.SENTRY_DSN,
-            # Set traces_sample_rate to 1.0 to capture 100%
-            # of transactions for performance monitoring.
-            traces_sample_rate=1.0,
-            environment=AppConfig.ENVIRONMENT,
-            # Set profiles_sample_rate to 1.0 to profile 100%
-            # of sampled transactions.
-            # We recommend adjusting this value in production.
-            profiles_sample_rate=1.0,
-        )
-
 
     app = FastAPI(
         title=app_config.PROJECT_TITLE,
