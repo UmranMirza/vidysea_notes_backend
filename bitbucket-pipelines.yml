@@ -1,0 +1,213 @@
+# Template docker-push
+
+# This template allows you to build and push your docker image to a Docker Hub account.
+# The workflow allows running tests, code linting and security scans on feature branches (as well as master).
+# The docker image will be validated and pushed to the docker registry after the code is merged to master.
+
+# Prerequisites: $DOCKERHUB_USERNAME, $DOCKERHUB_PASSWORD setup as deployment variables
+
+image: python:3.10
+options:
+  docker: false
+definitions:
+  services:
+    docker:
+      memory: 2096
+pipelines:
+  default:
+    - parallel:
+        - step:
+            name: Test
+            caches:
+              - pip
+            script:
+              - echo "Your build and test goes here..."
+              - pip install -r requirements.txt
+              - pip install pytest==7.1.2
+              - pip install pytest-cov==3.0.0
+              - coverage run -m pytest
+              - coverage report -m
+              - pytest
+        - step:
+            name: 'Lint'
+            script:
+              - echo "Your linting goes here..."
+              - pip install pylint
+              - pip install black
+              - echo "Code format for application"
+              - black application/
+              - echo "Code format for tests"
+              # - black tests/
+              # - echo "Test lint"
+              # - pylint --disable=too-few-public-methods,broad-except,redefined-outer-name,import-error,import-outside-toplevel,wrong-import-order,ungrouped-imports,trailing-newlines,missing-final-newline,line-too-long,no-self-use --fail-under=8 tests/
+              - echo "aplication lint"
+              - pylint --disable=too-few-public-methods,broad-except,redefined-outer-name,import-error,import-outside-toplevel,wrong-import-order,ungrouped-imports,trailing-newlines,missing-final-newline,line-too-long,no-self-use --fail-under=8 application/
+  branches:
+    dev:
+      - step:
+          name: Build and Test
+          docker: true
+          size: 4x
+          runs-on:
+              - ace
+              - self.hosted
+              - linux
+              - dev
+          script:
+            - IMAGE_NAME=$BITBUCKET_REPO_SLUG
+            - docker build . --file Dockerfile --tag ${IMAGE_NAME}
+            - docker save ${IMAGE_NAME} --output "${IMAGE_NAME}.tar"
+          services:
+            - docker
+          caches:
+            - docker
+          artifacts:
+            - "*.tar"
+      - step:
+          name: Push Build to Test/Dev Registry
+          docker: true
+          size: 1x
+          runs-on:
+              - ace
+              - self.hosted
+              - linux
+              - dev
+          script:
+            - echo ${DOCKERHUB_PASSWORD} | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - IMAGE_NAME=$BITBUCKET_REPO_SLUG
+            - docker load --input "${IMAGE_NAME}.tar"
+            - VERSION="ace-user-service-0.1.${BITBUCKET_BUILD_NUMBER}"
+            - IMAGE=${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}
+            - docker tag "${IMAGE_NAME}" "mohitsymb/symb_build:ace_coupon_service_dev"
+            - docker push "mohitsymb/symb_build:ace_coupon_service_dev"
+          services:
+            - docker
+      - step:
+          name: Deploy dev env
+          deployment: Test
+          # trigger: manual
+          runs-on:
+            - self.hosted
+            - linux.shell
+            - ace
+            - dev
+          script:
+            - echo "Deploying"
+            - cd /home/ubuntu/ace-deploy/dev
+            - ls && pwd
+            - echo ${DOCKERHUB_PASSWORD} | sudo docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - sudo docker-compose pull ace_coupon_service 
+            - sudo docker-compose up -d ace_coupon_service
+            - sudo docker system prune --force  
+    release/staging:
+      - step:
+          name: Build and Test
+          docker: true
+          size: 4x
+          runs-on:
+              - ace
+              - self.hosted
+              - linux
+              - dev
+          script:
+            - IMAGE_NAME=$BITBUCKET_REPO_SLUG
+            - docker build . --file Dockerfile --tag ${IMAGE_NAME}
+            - docker save ${IMAGE_NAME} --output "${IMAGE_NAME}.tar"
+          services:
+            - docker
+          caches:
+            - docker
+          artifacts:
+            - "*.tar"
+      - step:
+          name: Push Build to Test/Dev Registry
+          docker: true
+          size: 1x
+          runs-on:
+              - ace
+              - self.hosted
+              - linux
+              - dev
+          script:
+            - echo ${DOCKERHUB_PASSWORD} | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - IMAGE_NAME=$BITBUCKET_REPO_SLUG
+            - docker load --input "${IMAGE_NAME}.tar"
+            - VERSION="ace-user-service-0.1.${BITBUCKET_BUILD_NUMBER}"
+            - IMAGE=${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}
+            - docker tag "${IMAGE_NAME}" "mohitsymb/symb_build:ace_coupon_service_staging"
+            - docker push "mohitsymb/symb_build:ace_coupon_service_staging"
+          services:
+            - docker
+      - step:
+          name: Deploy dev env
+          deployment: Test
+          # trigger: manual
+          runs-on:
+            - self.hosted
+            - linux.shell
+            - ace
+            - staging
+          script:
+            - echo "Deploying"
+            - cd /home/ubuntu/ace-deploy/staging
+            - ls && pwd
+            - echo ${DOCKERHUB_PASSWORD} | sudo docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - sudo docker-compose pull ace_coupon_service 
+            - sudo docker-compose up -d ace_coupon_service
+            - sudo docker system prune --force 
+    production:
+      - step:
+          name: Build and Test
+          docker: true
+          size: 4x
+          runs-on:
+              - ace
+              - self.hosted
+              - linux
+              - staging
+          script:
+            - IMAGE_NAME=$BITBUCKET_REPO_SLUG
+            - docker build . --file Dockerfile --tag ${IMAGE_NAME}
+            - docker save ${IMAGE_NAME} --output "${IMAGE_NAME}.tar"
+          services:
+            - docker
+          caches:
+            - docker
+          artifacts:
+            - "*.tar"
+      - step:
+          name: Push Build to Test/Dev Registry
+          docker: true
+          size: 1x
+          runs-on:
+              - ace
+              - self.hosted
+              - linux
+              - staging
+          script:
+            - echo ${DOCKERHUB_PASSWORD} | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - IMAGE_NAME=$BITBUCKET_REPO_SLUG
+            - docker load --input "${IMAGE_NAME}.tar"
+            - VERSION="ace-user-service-0.1.${BITBUCKET_BUILD_NUMBER}"
+            - IMAGE=${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}
+            - docker tag "${IMAGE_NAME}" "mohitsymb/symb_build:ace_coupon_service_production"
+            - docker push "mohitsymb/symb_build:ace_coupon_service_production"
+          services:
+            - docker
+      - step:
+          name: Deploy dev env
+          deployment: Test
+          trigger: manual
+          runs-on:
+            - self.hosted
+            - linux.shell
+            - ace
+            - production
+          script:
+            - echo "Deploying"
+            - cd /home/ubuntu/ace-deploy/production
+            - ls && pwd
+            - echo ${DOCKERHUB_PASSWORD} | sudo docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            - sudo docker-compose pull ace_coupon_service 
+            - sudo docker-compose up -d ace_coupon_service
+            - sudo docker system prune --force 
