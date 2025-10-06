@@ -1,0 +1,9 @@
+*.pyc
+.idea/*
+__pycache__/
+venv
+*.__pycache__
+.scannerwork/
+migration/versions/*
+.env
+.vscode
