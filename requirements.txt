@@ -6,3 +6,5 @@ pydantic-settings
 python-jose[cryptography]
 passlib[bcrypt]
 alembic==1.8.1
+fastapi_amis_admin==0.5.0
+greenlet==3.2.4
