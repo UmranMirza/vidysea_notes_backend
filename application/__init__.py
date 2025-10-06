@@ -79,5 +79,7 @@ def create_app():
     # routes
     from application.routes.app.test import test_router
     app.include_router(test_router, prefix="/app/test",tags=["Test"])
+    from application.routes.app.auth import manage_auth
+    app.include_router(manage_auth, prefix="/manage/auth",tags=["manage_auth"])
 
     return app

@@ -29,8 +29,8 @@ class AuthService():
         # txt = "43200"
         txt = "30_days"
         required_fields = {
-            'user': ['id', 'name', 'phone','is_active' 'email','role'],
-            'admin': ['id', 'name', 'phone','is_active' 'email','role'],
+            'user': ['id', 'name', 'phone','is_active', 'email','role'],
+            'admin': ['id', 'name', 'phone','is_active', 'email','role'],
         }
         if user_type == 'admin':
             txt =int(AuthConfig.ADMIN_TOKEN_EXPIRATION_TIME)

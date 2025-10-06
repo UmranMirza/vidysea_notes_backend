@@ -15,3 +15,6 @@ class User(Generic):
     notes = relationship("Note", back_populates="owner")
 
 
+    @classmethod
+    def get_by_email(cls, db, email):
+        return db.query(cls).filter(cls.email == email, cls.deleted_at.is_(None)).first()

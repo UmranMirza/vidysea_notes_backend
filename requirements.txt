@@ -3,7 +3,6 @@ fastapi==0.94.1
 fastapi_amis_admin==0.5.0
 fastapi_mail==1.2.6
 fastapi_scheduler==0.0.12
-passlib==1.7.4
 pycryptodome==3.17
 pydantic==1.10.2
 PyJWT==2.6.0
@@ -13,3 +12,5 @@ uvicorn==0.21.0
 psycopg2-binary==2.9.5
 requests==2.31.0
 asyncpg==0.27.0
+bcrypt==3.2.2
+passlib==1.7.4
