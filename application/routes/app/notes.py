@@ -127,20 +127,25 @@ def get_all_notes(request: Request, db: Session = activeSession):
     sort_by = request.query_params.get('sort_by', 'newest')
     search_key = request.query_params.get('q', '')
 
-    notes, total = note_service.paginate_notes(db=db, page=page, limit=limit, sort_by=sort_by, search_key=search_key)
+    notes, total = note_service.list_notes(db=db, sort_by=sort_by, search_key=search_key)
 
-    notes_list = [
-        {
+    notes_list = []
+    for note in notes :
+        my_note =False
+        if note.owner_id == request.state.user_id:
+            my_note = True
+        list_data={
             "id": note.id,
             "title": note.title,
             "description": note.description,
             "owner_id": note.owner_id,
             "created_at": note.created_at,
-            "updated_at": note.updated_at
+            "updated_at": note.updated_at,
+            "my_note": my_note
             
         }
-        for note in notes
-    ]
+        notes_list.append(list_data)
+       
     pages_count = math.ceil(total / limit) if total else 1
     return APIResponse(
         message="All notes",
@@ -163,7 +168,7 @@ def admin_create_note(request: Request, data: NoteCreate, db: Session = activeSe
     """
     Admin can create note for any user.
     """
-    owner_id = data.owner_id  # Admin must pass owner_id in request
+    owner_id =  request.state.user_id # Admin must pass owner_id in request
     note = note_service.create_note(db=db, title=data.title, description=data.description, owner_id=owner_id)
     
     if not note:
