@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import Session
 
 from application.models.notes import Note
@@ -35,3 +35,43 @@ class NoteService:
             note.deleted_at = func.now()
             db.commit()
         return None
+
+    def paginate_notes(self, db, page=1, limit=10, sort_by='id', search_key=''):
+        query = db.query(Note).filter(Note.deleted_at.is_(None))
+        if search_key:
+            query = query.filter(Note.title.ilike(f"%{search_key}%"))
+        total = query.count()
+        # Sorting logic
+        if sort_by == "newest":
+            query = query.order_by(desc(Note.created_at))
+        elif sort_by == "oldest":
+            query = query.order_by(asc(Note.created_at))
+        else:
+            sort_column = getattr(Note, sort_by.lstrip('-'), None)
+            if sort_column is not None:
+                if sort_by.startswith('-'):
+                    query = query.order_by(desc(sort_column))
+                else:
+                    query = query.order_by(asc(sort_column))
+        notes = query.offset((page - 1) * limit).limit(limit).all()
+        return notes, total
+
+    def paginate_notes_by_owner(self, db, owner_id, page=1, limit=10, sort_by='id', search_key=''):
+        query = db.query(Note).filter(Note.owner_id == owner_id, Note.deleted_at.is_(None))
+        if search_key:
+            query = query.filter(Note.title.ilike(f"%{search_key}%"))
+        total = query.count()
+        # Sorting logic
+        if sort_by == "newest":
+            query = query.order_by(desc(Note.created_at))
+        elif sort_by == "oldest":
+            query = query.order_by(asc(Note.created_at))
+        else:
+            sort_column = getattr(Note, sort_by.lstrip('-'), None)
+            if sort_column is not None:
+                if sort_by.startswith('-'):
+                    query = query.order_by(desc(sort_column))
+                else:
+                    query = query.order_by(asc(sort_column))
+        notes = query.offset((page - 1) * limit).limit(limit).all()
+        return notes, total

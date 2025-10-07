@@ -6,6 +6,7 @@ from application.utilities.res import APIError, APIResponse
 from application.utilities.serialization import serialize
 from application.services.notes_service import NoteService
 from application.schemas.note_schema import NoteCreate, NoteEdit
+import math
 
 note_service = NoteService()
 notes_router = APIRouter()
@@ -42,10 +43,16 @@ def get_user_notes(request: Request, db: Session = activeSession):
     user_id = request.state.user_id
     role = request.state.role
 
+    # Pagination and search params
+    page = int(request.query_params.get('page', 1))
+    limit = int(request.query_params.get('limit', 10))
+    sort_by = request.query_params.get('sort_by', 'newest')
+    search_key = request.query_params.get('q', '')
+
     if role == "admin":
-        notes = note_service.get_all_notes(db=db)
+        notes, total = note_service.paginate_notes(db=db, page=page, limit=limit, sort_by=sort_by, search_key=search_key)
     else:
-        notes = note_service.get_notes_by_owner(db=db, owner_id=user_id)
+        notes, total = note_service.paginate_notes_by_owner(db=db, owner_id=user_id, page=page, limit=limit, sort_by=sort_by, search_key=search_key)
 
     notes_list = [
         {
@@ -56,7 +63,20 @@ def get_user_notes(request: Request, db: Session = activeSession):
         }
         for note in notes
     ]
-    return APIResponse(message="Notes list", data=serialize({"notes": notes_list})).to_json()
+    pages_count = math.ceil(total / limit) if total else 1
+    return APIResponse(
+        message="Notes list",
+        data=serialize({
+            "notes": notes_list,
+            "total": total,
+            "page_size": limit,
+            "has_next": page < pages_count,
+            "has_prev": page > 1,
+            "per_page": limit,
+            "pages": pages_count
+        })
+    ).to_json()
+
 
 @notes_router.put("/edit/{note_id}")
 @user_login_required
@@ -107,7 +127,14 @@ def delete_note(request: Request, note_id: int, db: Session = activeSession):
 @notes_router.get("/all")
 @admin_login_required
 def get_all_notes(request: Request, db: Session = activeSession):
-    notes = note_service.get_all_notes(db=db)
+    # Pagination and search params
+    page = int(request.query_params.get('page', 1))
+    limit = int(request.query_params.get('limit', 10))
+    sort_by = request.query_params.get('sort_by', 'newest')
+    search_key = request.query_params.get('q', '')
+
+    notes, total = note_service.paginate_notes(db=db, page=page, limit=limit, sort_by=sort_by, search_key=search_key)
+
     notes_list = [
         {
             "id": note.id,
@@ -117,7 +144,19 @@ def get_all_notes(request: Request, db: Session = activeSession):
         }
         for note in notes
     ]
-    return APIResponse(message="All notes", data=serialize({"notes": notes_list})).to_json()
+    pages_count = math.ceil(total / limit) if total else 1
+    return APIResponse(
+        message="All notes",
+        data=serialize({
+            "notes": notes_list,
+            "total": total,
+            "page_size": limit,
+            "has_next": page < pages_count,
+            "has_prev": page > 1,
+            "per_page": limit,
+            "pages": pages_count
+        })
+    ).to_json()
 
 
 
