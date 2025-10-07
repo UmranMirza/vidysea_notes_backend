@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from sqlalchemy import Column,Integer,DateTime
 from application import Base
 from fastapi_mail import MessageSchema, MessageType
-import pdfkit
 
 class Generic(Base):
     __abstract__ = True
