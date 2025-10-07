@@ -36,7 +36,7 @@ class NoteService:
             db.commit()
         return None
 
-    def paginate_notes(self, db, page=1, limit=10, sort_by='id', search_key=''):
+    def list_notes(self, db, sort_by='id', search_key=''):
         query = db.query(Note).filter(Note.deleted_at.is_(None))
         if search_key:
             query = query.filter(Note.title.ilike(f"%{search_key}%"))
@@ -53,10 +53,10 @@ class NoteService:
                     query = query.order_by(desc(sort_column))
                 else:
                     query = query.order_by(asc(sort_column))
-        notes = query.offset((page - 1) * limit).limit(limit).all()
+        notes = query.all()
         return notes, total
 
-    def paginate_notes_by_owner(self, db, owner_id, page=1, limit=10, sort_by='id', search_key=''):
+    def list_notes_by_owner(self, db, owner_id, sort_by='id', search_key=''):
         query = db.query(Note).filter(Note.owner_id == owner_id, Note.deleted_at.is_(None))
         if search_key:
             query = query.filter(Note.title.ilike(f"%{search_key}%"))
@@ -73,5 +73,5 @@ class NoteService:
                     query = query.order_by(desc(sort_column))
                 else:
                     query = query.order_by(asc(sort_column))
-        notes = query.offset((page - 1) * limit).limit(limit).all()
+        notes = query.all()
         return notes, total

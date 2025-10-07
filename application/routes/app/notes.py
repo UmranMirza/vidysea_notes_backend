@@ -44,15 +44,13 @@ def get_user_notes(request: Request, db: Session = activeSession):
     role = request.state.role
 
     # Pagination and search params
-    page = int(request.query_params.get('page', 1))
-    limit = int(request.query_params.get('limit', 10))
     sort_by = request.query_params.get('sort_by', 'newest')
     search_key = request.query_params.get('q', '')
 
     if role == "admin":
-        notes, total = note_service.paginate_notes(db=db, page=page, limit=limit, sort_by=sort_by, search_key=search_key)
+        notes, total = note_service.list_notes(db=db, sort_by=sort_by, search_key=search_key)
     else:
-        notes, total = note_service.paginate_notes_by_owner(db=db, owner_id=user_id, page=page, limit=limit, sort_by=sort_by, search_key=search_key)
+        notes, total = note_service.list_notes_by_owner(db=db, owner_id=user_id,sort_by=sort_by, search_key=search_key)
 
     notes_list = [
         {
@@ -60,20 +58,16 @@ def get_user_notes(request: Request, db: Session = activeSession):
             "title": note.title,
             "description": note.description,
             "owner_id": note.owner_id,
+            "created_at": note.created_at,
+            "updated_at": note.updated_at
         }
         for note in notes
     ]
-    pages_count = math.ceil(total / limit) if total else 1
     return APIResponse(
         message="Notes list",
         data=serialize({
             "notes": notes_list,
-            "total": total,
-            "page_size": limit,
-            "has_next": page < pages_count,
-            "has_prev": page > 1,
-            "per_page": limit,
-            "pages": pages_count
+            "total": total
         })
     ).to_json()
 
@@ -141,6 +135,9 @@ def get_all_notes(request: Request, db: Session = activeSession):
             "title": note.title,
             "description": note.description,
             "owner_id": note.owner_id,
+            "created_at": note.created_at,
+            "updated_at": note.updated_at
+            
         }
         for note in notes
     ]

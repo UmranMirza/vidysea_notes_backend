@@ -4,6 +4,7 @@ import jwt
 from passlib.context import CryptContext
 from application.configuration.auth_config import AuthConfig
 from application.utilities.serialization import serialize
+from fastapi import HTTPException, status
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -48,9 +49,24 @@ class AuthService():
             )
             return decoded
         except jwt.ExpiredSignatureError:
-            raise Exception("Token has expired")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired")
         except jwt.InvalidTokenError:
-            raise Exception("Invalid token")
+           raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        except jwt.DecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e)
+            )
 
     def verify(self, plain_password, hashed_password):
         return pwd_context.verify(plain_password, hashed_password)
